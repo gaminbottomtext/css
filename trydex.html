@@ -3605,32 +3605,32 @@ function clickCopy(button) {
 
 clickCopy($('.clickcopy'))
 
-function FixedHeader(header) {
-  this.header = header;
-  this.isFixed = false;
-  this.marginTop = parseInt(header.css("margin-top"));
+//function FixedHeader(header) {
+  //this.header = header;
+  //this.isFixed = false;
+  //this.marginTop = parseInt(header.css("margin-top"));
 
-   this.updateHeader = function() {
-  if (window.pageYOffset >= this.marginTop) {
-    if (!this.isFixed) {
-      this.isFixed = true;
-      this.header.addClass("fixed");
-    }
-  } else if (this.isFixed) {
-    this.isFixed = false;
-    this.header.removeClass("fixed");
-  }
-};
+  // this.updateHeader = function() {
+  //if (window.pageYOffset >= this.marginTop) {
+   // if (!this.isFixed) {
+     // this.isFixed = true;
+      //this.header.addClass("fixed");
+    //}
+  //} else if (this.isFixed) {
+    //this.isFixed = false;
+    //this.header.removeClass("fixed");
+  //}
+//};
 
   // Check if screen width is greater than 1024px and body does not have 'header-nofixed' class
-  if (window.innerWidth > 1024 && !$("body").hasClass("header-nofixed")) {
-    this.updateHeader();
-    $(window).scroll($.proxy(this.updateHeader, this));
-  }
-}
+ // if (window.innerWidth > 1024 && !$("body").hasClass("header-nofixed")) {
+   // this.updateHeader();
+   // $(window).scroll($.proxy(this.updateHeader, this));
+  //}
+//}
 
 
-FixedHeader($("#header"))
+//FixedHeader($("#header"))
 
  function UserEditAvatar(modal) {
     // Initialize
