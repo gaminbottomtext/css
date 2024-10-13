@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime MAL ID & Episode Finder with Thumbnails</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #131313;
+        }
+        #container {
+            max-width: 800px;
+            margin: auto;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #result, #episodeGrid {
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
+        }
+        .anime-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .anime-item {
+            cursor: pointer;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            transition: border-color 0.3s ease;
+        }
+        .anime-item:hover {
+            border-color: #28a745;
+        }
+        .anime-item img {
+            max-width: 100px;
+            height: auto;
+            border-radius: 5px;
+        }
+        .anime-item p {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .selected-anime {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        .episode-grid {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr); /* Adjust the number of columns here */
+            gap: 5px;
+        }
+        .episode {
+            padding: 10px;
+            border: 1px solid #333;
+            text-align: center;
+            cursor: pointer;
+            background-color: #222; /* Default background */
+            color: white;
+        }
+        .filler {
+            background-color: yellow; /* Filler episodes */
+        }
+        .selected-episode {
+            background-color: red; /* Selected episode */
+        }
+        .pagination {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <h1>Anime MAL ID & Episode Finder with Thumbnails</h1>
+    <input type="text" id="animeTitle" placeholder="Enter anime title" />
+    <button onclick="fetchAnime()">Find Anime</button>
+    
+    <div id="result"></div>
+    <div id="animeList" class="anime-list"></div>
+    <div id="episodeGrid" class="episode-grid"></div>
+    <div id="paginationControls" class="pagination"></div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let lastPage = false;
+    let mal_id = null;
+    let selectedAnimeId = null; // Global identifier for selected anime
+    let selectedEpisodeId = null; // Global identifier for selected episode
+    var clickCounter=null;
+
+    async function fetchAnime() {
+        const title = document.getElementById('animeTitle').value.trim();
+        const resultDiv = document.getElementById('result');
+        const animeListDiv = document.getElementById('animeList');
+        const episodeGrid = document.getElementById('episodeGrid');
+        const paginationControls = document.getElementById('paginationControls');
+
+        resultDiv.innerHTML = ''; // Clear previous results
+        animeListDiv.innerHTML = ''; // Clear anime list
+        episodeGrid.innerHTML = ''; // Clear episode grid
+        paginationControls.innerHTML = ''; // Clear pagination controls
+        currentPage = 1; // Reset to the first page
+        selectedAnimeId = null; // Reset the global identifier for anime selection
+
+        if (!title) {
+            resultDiv.innerHTML = '<p class="error">Please enter a title.</p>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(title)}&limit=10`);
+            const data = await response.json();
+            
+            if (data.data && data.data.length > 0) {
+                // Multiple anime results, display thumbnails for selection
+                animeListDiv.innerHTML = '<h3>Select an Anime</h3>';
+                data.data.forEach(anime => {
+                    const animeItem = document.createElement('div');
+                    animeItem.classList.add('anime-item');
+                    animeItem.innerHTML = `
+                        <img src="${anime.images.jpg.image_url}" alt="${anime.title}" />
+                        <p>${anime.title}</p>
+                    `;
+                    animeItem.addEventListener('click', () => selectAnime(anime.mal_id, anime.title, animeItem));
+                    animeListDiv.appendChild(animeItem);
+                });
+            } else {
+                resultDiv.innerHTML = '<p class="error">No anime found for the provided title.</p>';
+            }
+        } catch (error) {
+            resultDiv.innerHTML = `<p class="error">Error fetching data: ${error.message}</p>`;
+        }
+    }
+
+    function selectAnime(id, title, animeItem) {
+        const resultDiv = document.getElementById('result');
+        const episodeGrid = document.getElementById('episodeGrid');
+        const paginationControls = document.getElementById('paginationControls');
+        const animeItems = document.querySelectorAll('.anime-item'); // Get all anime items
+
+        // Deselect the previously selected anime
+        animeItems.forEach(item => item.classList.remove('selected-anime'));
+
+        // Select the new anime and update the global identifier
+        selectedAnimeId = id;
+        animeItem.classList.add('selected-anime'); // Highlight the clicked anime
+        mal_id = id;
+        resultDiv.innerHTML = `<p><strong>Selected Anime:</strong> ${title} | <strong>MAL ID:</strong> ${mal_id}</p>`;
+        episodeGrid.innerHTML = ''; // Clear episode grid
+        paginationControls.innerHTML = ''; // Clear pagination controls
+        currentPage = 1; // Reset to the first page
+
+        // Fetch episodes and filler information for the first page
+        fetchEpisodes(mal_id, currentPage);
+    }
+
+    async function fetchEpisodes(mal_id, page) {
+        const episodeGrid = document.getElementById('episodeGrid');
+        const paginationControls = document.getElementById('paginationControls');
+        
+        try {
+            const episodesResponse = await fetch(`https://api.jikan.moe/v4/anime/${mal_id}/episodes?page=${page}`);
+            const episodesData = await episodesResponse.json();
+            
+            const totalEpisodes = episodesData.data.length;
+            const pagination = episodesData.pagination;
+
+            // Create episode grid
+            for (let i = 0; i < totalEpisodes; i++) {
+                const episode = episodesData.data[i];
+                const episodeBox = document.createElement('div');
+                episodeBox.classList.add('episode');
+                episodeBox.innerText = episode.mal_id; // Show episode number
+
+                // Check if episode is filler (boolean check)
+                if (episode.filler) {
+                    episodeBox.classList.add('filler'); // Highlight filler episodes in yellow
+                }
+
+                // Add click event to toggle episode selection (highlight in red)
+                episodeBox.addEventListener('click', () => selectEpisode(episode.mal_id, episodeBox));
+
+                episodeGrid.appendChild(episodeBox);
+            }
+
+            // Pagination logic
+            if (pagination.has_next_page) {
+                paginationControls.innerHTML = `<button onclick="fetchNextPage()">Load More Episodes</button>`;
+            } else {
+                lastPage = true;
+                paginationControls.innerHTML = `<p>No more episodes to load.</p>`;
+            }
+        } catch (error) {
+            console.error("Error fetching episodes: ", error);
+        }
+    }
+
+    function selectEpisode(episodeId, episodeBox) {
+        clickCounter++;
+        const episodeBoxes = document.querySelectorAll('.episode'); // Get all episode boxes
+
+        // Deselect the previously selected episode
+        episodeBoxes.forEach(box => box.classList.remove('selected-episode'));
+
+        // Select the new episode and update the global identifier
+        selectedEpisodeId = episodeId;
+        var iframe = document.createElement('iframe');
+        var html = '<iframe src="https://vidlink.pro/anime/'  + selectedAnimeId +  '/' + 'selectedEpisodeId' + '/dub?icons=vid&player=jw"></iframe>';
+        iframe.src = 'https://vidlink.pro/anime/'  + selectedAnimeId +  '/' + selectedEpisodeId + '/dub?icons=vid&player=jw';
+        console.log(iframe.src);
+        iframe.width=1280;
+        iframe.height=720;
+        iframe.style.top='50%'
+        iframe.style.left='50%';
+        iframe.style.display='flex';
+        iframe.style.alignItems='center';
+        iframe.style.justifyContent='center';
+        iframe.style.flexDirection='column';
+
+        // Count the number of iframe elements on the page
+        var iframeCount = document.getElementsByTagName('iframe').length;
+        console.log(clickCounter);
+        var container = document.getElementById('container');
+        container.appendChild(iframe);
+        if (iframeCount > 1){
+            container.removeChild(document.getElementsByTagName('iframe')[document.getElementsByTagName('iframe').length - 1])
+        }
+        console.log(selectedEpisodeId);
+        episodeBox.classList.add('selected-episode'); // Highlight the clicked episode
+    }
+
+    function fetchNextPage() {
+        if (!lastPage) {
+            currentPage++;
+            fetchEpisodes(mal_id, currentPage);
+        }
+    }
+</script>
+
+</body>
+</html>

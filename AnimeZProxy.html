@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirect Tunnel</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+    .container {
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Redirecting to Local Server...</h1>
+    <p>If the redirection doesn't happen automatically, click the button below:</p>
+    <button id="redirectBtn">Go to Local Server</button>
+  </div>
+
+  <script>
+    // Set the local server URL you want to redirect to
+    const localServerUrl = "https://common-masks-fetch.loca.lt"; // Modify as needed
+
+    // Automatic redirect after a delay (3 seconds)
+    setTimeout(() => {
+      window.location.href = localServerUrl;
+    }, 3000);
+
+    // Manual redirect if the button is clicked
+    document.getElementById("redirectBtn").addEventListener("click", () => {
+      window.location.href = localServerUrl;
+    });
+  </script>
+</body>
+</html>

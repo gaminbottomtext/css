@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episodes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #131313;
+        }
+        #container {
+            max-width: 800px;
+            margin: auto;
+            text-align: center;
+        }
+        .thumbnail-container {
+            position: relative;
+            display: inline-block;
+        }
+        .thumbnail {
+            width: 1280px;
+            height: 720px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .iframe-container {
+            display: none;
+            width: 1280px;
+            height: 720px;
+            margin-top: 20px;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+        }
+        .episode-grid {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr); /* Adjust the number of columns here */
+            gap: 5px;
+            margin-top: 20px;
+        }
+        .episode {
+            padding: 10px;
+            border: 1px solid #333;
+            text-align: center;
+            cursor: pointer;
+            background-color: #222; /* Default background */
+            color: white;
+        }
+        .filler {
+            background-color: yellow; /* Filler episodes */
+        }
+        .selected-episode {
+            background-color: red; /* Selected episode */
+        }
+        .pagination {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .pagination button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .pagination button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <h1>Episodes</h1>
+    
+    <!-- Thumbnail Section -->
+    <div class="thumbnail-container">
+        <img id="thumbnail" class="thumbnail" src="" alt="Anime Thumbnail" onclick="showIframe()">
+        <div id="iframe-container" class="iframe-container">
+            <iframe id="episodeIframe" src="" frameborder="0"></iframe>
+        </div>
+    </div>
+
+    <!-- Episode Grid Section -->
+    <div id="episodeGrid" class="episode-grid"></div>
+    <div id="paginationControls" class="pagination"></div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let lastPage = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const animeId = urlParams.get('anime');
+        const episodeNumber = urlParams.get('episode');
+
+        if (!animeId) {
+            alert('No anime ID provided');
+            return;
+        }
+
+        // Set up the thumbnail and iframe based on the URL parameters
+        const thumbnail = document.getElementById('thumbnail');
+        const iframeContainer = document.getElementById('iframe-container');
+        const episodeIframe = document.getElementById('episodeIframe');
+        
+        // Placeholder thumbnail URL (You should replace this with the actual URL or logic to get it)
+        thumbnail.src = `https://via.placeholder.com/1280x720.png?text=Thumbnail+for+Anime+ID+${animeId}`;
+
+        // Load episodes
+        fetchEpisodes(animeId, currentPage);
+
+        // Show the iframe if an episode number is provided
+        if (episodeNumber) {
+            showIframe();
+            episodeIframe.src = `https://vidlink.pro/anime/${animeId}/${episodeNumber}/dub?icons=vid&player=jw`;
+        }
+    });
+
+    function showIframe() {
+        const thumbnail = document.getElementById('thumbnail');
+        const iframeContainer = document.getElementById('iframe-container');
+        
+        thumbnail.style.display = 'none';
+        iframeContainer.style.display = 'block';
+    }
+
+    async function fetchEpisodes(animeId, page) {
+        const episodeGrid = document.getElementById('episodeGrid');
+        const paginationControls = document.getElementById('paginationControls');
+
+        try {
+            const response = await fetch(`https://api.jikan.moe/v4/anime/${animeId}/episodes?page=${page}`);
+            const data = await response.json();
+
+            const totalEpisodes = data.data.length;
+
+            // Create episode grid
+            data.data.forEach(episode => {
+                const episodeBox = document.createElement('div');
+                episodeBox.classList.add('episode');
+                episodeBox.innerText = episode.mal_id; // Show episode number
+
+                // Check if episode is filler (boolean check)
+                if (episode.filler) {
+                    episodeBox.classList.add('filler'); // Highlight filler episodes in yellow
+                }
+
+                // Add click event to select episode
+                episodeBox.addEventListener('click', () => {
+                    const urlParams = new URLSearchParams({
+                        anime: animeId,
+                        episode: episode.mal_id
+                    });
+                    window.location.href = `episodes.html?${urlParams.toString()}`;
+                });
+
+                episodeGrid.appendChild(episodeBox);
+            });
+
+            // Pagination logic
+            if (data.pagination.has_next_page) {
+                paginationControls.innerHTML = `<button onclick="loadMoreEpisodes()">Show More Episodes</button>`;
+            } else {
+                lastPage = true;
+                paginationControls.innerHTML = `<p>No more episodes to load.</p>`;
+            }
+        } catch (error) {
+            console.error("Error fetching episodes: ", error);
+        }
+    }
+
+    function loadMoreEpisodes() {
+        if (!lastPage) {
+            currentPage++;
+            fetchEpisodes(new URLSearchParams(window.location.search).get('anime'), currentPage);
+        }
+    }
+</script>
+
+</body>
+</html>
